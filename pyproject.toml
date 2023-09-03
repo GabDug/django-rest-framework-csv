@@ -66,6 +66,8 @@ dev = [
 fmt = {cmd="black .", help="Run black formatter"}
 lint-mypy = {cmd="mypy", help="Run mypy type checker"}
 lint-ruff = {cmd="ruff .", help="Run ruff linter"}
+test = {cmd="python manage.py test", help="Run tests"}
+test-tox = {cmd="tox", help="Run tox tests"}
 
 [build-system]
 requires = ["setuptools", "setuptools-scm"]
