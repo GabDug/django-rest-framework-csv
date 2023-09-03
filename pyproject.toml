@@ -43,6 +43,8 @@ packages = ["rest_framework_csv"]
 [tool.setuptools.dynamic]
 version = { attr = "rest_framework_csv.__version__" }
 
+[tool.pdm]
+plugins = ["sync-pre-commit-lock[pdm]"]
 
 [tool.pdm.dev-dependencies]
 dev = [
