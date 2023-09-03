@@ -81,3 +81,27 @@ target-version = "py38"
 
 [tool.ruff.per-file-ignores]
 "example/*" = ["E501", "F401", "S105"]
+
+[tool.mypy]
+files = ["rest_framework_csv"]
+python_version = "3.8"
+
+check_untyped_defs = true
+
+
+[tool.tox]
+legacy_tox_ini = """
+    [tox]
+    envlist =  py38-django{32,41,42}-drf3
+        py39-django{32,41,42}-drf3
+        py310-django{32,41,42}-drf3
+        py311-django{41,42}-drf3
+
+    [testenv]
+    commands = python manage.py test
+    deps =
+        django32: Django>=3.2,<4
+        django41: Django>=4.1,<4.2
+        django42: Django>=4.2,<5
+        drf3: djangorestframework>=3,<4
+"""
