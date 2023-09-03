@@ -5,16 +5,17 @@ import csv
 from io import StringIO
 from logging import getLogger
 from types import GeneratorType
-from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, TypedDict, Union, cast
+from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Type, TypedDict, Union
 
 from rest_framework.renderers import BaseRenderer
 
 from rest_framework_csv.misc import Echo
 
-log = getLogger(__name__)
+_logger = getLogger(__name__)
 
 
 class _CSVWriterOpts(TypedDict, total=False):
+    dialect: csv.Dialect | Type[csv.Dialect] | str
     delimiter: str
     quotechar: str
     escapechar: str
@@ -50,7 +51,7 @@ class CSVRenderer(BaseRenderer):
         data: Union[List[Any], Dict[str, list[Any]], Any, None],
         accepted_media_type: Optional[str] = None,
         renderer_context: Optional[_RendererContext] = None,  # type: ignore[override]
-    ) -> str:
+    ) -> str | Generator[str, None, None]:
         """Renders serialized *data* into CSV. For a dictionary:"""
         if renderer_context is None:
             renderer_context = _RendererContext()
@@ -193,7 +194,10 @@ class CSVRendererWithUnderscores(CSVRenderer):
 
 class CSVStreamingRenderer(CSVRenderer):
     def render(
-        self, data, media_type=None, renderer_context: Optional[_RendererContext] = None
+        self,
+        data: Optional[Any],
+        media_type: str | None = None,
+        renderer_context: Optional[_RendererContext] = None,  # type: ignore[override]
     ) -> Generator[str, None, None]:
         """Renders serialized *data* into CSV to be used with Django
         StreamingHttpResponse. We need to return a generator here, so Django
@@ -219,7 +223,7 @@ class CSVStreamingRenderer(CSVRenderer):
         if not isinstance(data, GeneratorType) and not isinstance(data, list):
             data = [data]
 
-        writer_opts = cast(_CSVWriterOpts, renderer_context.get("writer_opts", self.writer_opts or {}))
+        writer_opts = renderer_context.get("writer_opts", self.writer_opts or {})
         header = renderer_context.get("header", self.header)
         labels = renderer_context.get("labels", self.labels)
         bom = renderer_context.get("bom", False)
@@ -228,7 +232,7 @@ class CSVStreamingRenderer(CSVRenderer):
             yield str(codecs.BOM_UTF8)
 
         table = self.tablize(data, header=header, labels=labels)
-        csv_buffer = Echo()
+        csv_buffer = Echo[str]()
         csv_writer = csv.writer(csv_buffer, **writer_opts)
         for row in table:
             yield csv_writer.writerow(row)
@@ -243,3 +247,13 @@ class PaginatedCSVRenderer(CSVRenderer):
         if not isinstance(data, list):
             data = data.get(self.results_field, [])
         return super().render(data, *args, **kwargs)
+
+
+class TSVRenderer(CSVRenderer):
+    """Renderer which serializes to TSV."""
+
+    media_type = "text/tab-separated-values"
+    format = "tsv"
+    writer_opts = {
+        "dialect": "excel-tab",
+    }

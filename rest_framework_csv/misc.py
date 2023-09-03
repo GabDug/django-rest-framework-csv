@@ -1,9 +1,11 @@
 from typing import TypeVar
 
+from typing_extensions import Generic
+
 _T = TypeVar("_T")
 
 
-class Echo:
+class Echo(Generic[_T]):
     """An object that implements just the write method of the file-like
     interface.
     """
