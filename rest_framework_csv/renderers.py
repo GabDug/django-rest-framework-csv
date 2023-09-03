@@ -5,7 +5,7 @@ import csv
 from io import StringIO
 from logging import getLogger
 from types import GeneratorType
-from typing import Any, ClassVar, Generator, Iterable, Mapping, TypedDict
+from typing import Any, Generator, Iterable, Mapping, TypedDict
 
 from rest_framework.renderers import BaseRenderer
 
@@ -254,6 +254,6 @@ class TSVRenderer(CSVRenderer):
 
     media_type = "text/tab-separated-values"
     format = "tsv"
-    writer_opts: _CSVWriterOpts = {
+    writer_opts: _CSVWriterOpts = {  # noqa: RUF012
         "dialect": "excel-tab",
     }

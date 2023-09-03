@@ -4,7 +4,6 @@ import csv
 from io import StringIO
 from pathlib import Path
 from types import GeneratorType
-from typing import Any
 
 from django.test import TestCase
 
