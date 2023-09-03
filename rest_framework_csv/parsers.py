@@ -33,7 +33,7 @@ def universal_newlines(stream) -> Generator[str, None, None]:
     # It's possible that the stream was not opened in universal
     # newline mode. If not, we may have a single "row" that has a
     # bunch of carriage return (\r) characters that should act as
-    # newlines. For that case, lets call splitlines on the row. If
+    # newlines. For that case, let's call splitlines on the row. If
     # it doesn't have any newlines, it will return a list of just
     # the row itself.
     yield from stream.splitlines()

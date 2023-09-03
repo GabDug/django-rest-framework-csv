@@ -78,8 +78,8 @@ class TestCSVRenderer(TestCase):
     def test_render_a_list_with_unicode_elements(self):
         renderer = CSVRenderer()
 
-        dump = renderer.render([{"a": 1, "b": "hello\u2014goodbye", "c": "http://example.com/"}])
-        assert dump == "a,b,c\r\n1,hello—goodbye,http://example.com/\r\n"
+        dump = renderer.render([{"a": 1, "b": "hello\u2014goodbye", "c": "https://example.com/"}])
+        assert dump == "a,b,c\r\n1,hello—goodbye,https://example.com/\r\n"
 
     def test_render_ordered_rows(self):
         parser = CSVParser()

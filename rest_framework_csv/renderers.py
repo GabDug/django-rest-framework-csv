@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import codecs
 import csv
 from io import StringIO
 from logging import getLogger
 from types import GeneratorType
-from typing import Any, Generator, Iterable, TypedDict, cast
+from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, TypedDict, Union, cast
 
 from rest_framework.renderers import BaseRenderer
 
@@ -25,8 +27,8 @@ class _CSVWriterOpts(TypedDict, total=False):
 
 class _RendererContext(TypedDict, total=False):
     writer_opts: _CSVWriterOpts
-    header: list[str]
-    labels: dict[str, str]
+    header: List[str]
+    labels: Dict[str, str]
     bom: bool
 
 
@@ -39,34 +41,26 @@ class CSVRenderer(BaseRenderer):
 
     format: str = "csv"
     level_sep: str = "."
-    header: list[str] | None = None
-    labels: dict[str, str] | None = None  # {'<field>':'<label>'}
-    writer_opts: _CSVWriterOpts | None = None
+    header: Optional[List[str]] = None
+    labels: Optional[Dict[str, str]] = None  # {'<field>':'<label>'}
+    writer_opts: Optional[_CSVWriterOpts] = None
 
     def render(
         self,
-        data,
-        accepted_media_type: str | None = None,
-        renderer_context: _RendererContext | None = None,
-        writer_opts: _CSVWriterOpts | None = None,
+        data: Union[List[Any], Dict[str, list[Any]], Any, None],
+        accepted_media_type: Optional[str] = None,
+        renderer_context: Optional[_RendererContext] = None,  # type: ignore[override]
     ) -> str:
         """Renders serialized *data* into CSV. For a dictionary:"""
         if renderer_context is None:
-            renderer_context = {}
+            renderer_context = _RendererContext()
         if data is None:
             return ""
 
         if not isinstance(data, list):
             data = [data]
 
-        if writer_opts is not None:
-            log.warning(
-                "The writer_opts argument is deprecated. Set the "
-                "writer_opts on the renderer class, instance, or pass "
-                "writer_opts into the renderer_context instead.",
-            )
-
-        writer_opts = cast(_CSVWriterOpts, renderer_context.get("writer_opts", writer_opts or self.writer_opts or {}))
+        writer_opts = renderer_context.get("writer_opts", self.writer_opts or _CSVWriterOpts())
         header = renderer_context.get("header", self.header)
         labels = renderer_context.get("labels", self.labels)
 
@@ -80,10 +74,10 @@ class CSVRenderer(BaseRenderer):
 
     def tablize(
         self,
-        data: Any,
-        header: Any | None = None,
-        labels: Any | None = None,
-    ) -> Generator[list[Any], None, None]:
+        data: Optional[Any],
+        header: Optional[List[str]] = None,
+        labels: Optional[Mapping[str, str]] = None,
+    ) -> Generator[List[Any], None, None]:
         """Convert a list of data into a table.
 
         If there is a header provided to tablize it will efficiently yield each
@@ -110,7 +104,7 @@ class CSVRenderer(BaseRenderer):
                 # We don't have to materialize the data generator unless we
                 # have to build a header.
                 data = tuple(data)
-                header_fields = set()
+                header_fields: set[str] = set()
                 for item in data:
                     header_fields.update(list(item.keys()))
                 header = sorted(header_fields)
@@ -138,7 +132,7 @@ class CSVRenderer(BaseRenderer):
             # Generator will yield nothing if there's no data and no header
             pass
 
-    def flatten_data(self, data: Iterable[Any]) -> Generator[dict[str, Any], None, None]:
+    def flatten_data(self, data: Iterable[Any]) -> Generator[Dict[str, Any], None, None]:
         """Convert the given data collection to a list of dictionaries that are
         each exactly one level deep. The key for each value in the dictionaries
         designates the name of the column that the value will fall into.
@@ -147,7 +141,7 @@ class CSVRenderer(BaseRenderer):
             flat_item = self.flatten_item(item)
             yield flat_item
 
-    def flatten_item(self, item: Any) -> dict[str, Any]:
+    def flatten_item(self, item: Any) -> Dict[str, Any]:
         if isinstance(item, list):
             flat_item = self.flatten_list(item)
         elif isinstance(item, dict):
@@ -157,7 +151,7 @@ class CSVRenderer(BaseRenderer):
 
         return flat_item
 
-    def nest_flat_item(self, flat_item: dict[str, Any], prefix: str) -> dict[str, Any]:
+    def nest_flat_item(self, flat_item: Dict[str, Any], prefix: str) -> dict[str, Any]:
         """Given a "flat item" (a dictionary exactly one level deep), nest all of
         the column headers in a namespace designated by prefix.  For example:
 
@@ -174,7 +168,7 @@ class CSVRenderer(BaseRenderer):
             nested_item[nested_header] = val
         return nested_item
 
-    def flatten_list(self, l: list[Any]) -> dict[str, Any]:  # noqa: E741
+    def flatten_list(self, l: List[Any]) -> Dict[str, Any]:  # noqa: E741
         flat_list = {}
         for index, item in enumerate(l):
             index_str = str(index)
@@ -199,7 +193,7 @@ class CSVRendererWithUnderscores(CSVRenderer):
 
 class CSVStreamingRenderer(CSVRenderer):
     def render(
-        self, data, media_type=None, renderer_context: _RendererContext | None = None
+        self, data, media_type=None, renderer_context: Optional[_RendererContext] = None
     ) -> Generator[str, None, None]:
         """Renders serialized *data* into CSV to be used with Django
         StreamingHttpResponse. We need to return a generator here, so Django
@@ -245,7 +239,7 @@ class PaginatedCSVRenderer(CSVRenderer):
 
     results_field: str = "results"
 
-    def render(self, data: list[Any] | dict[str, list[Any] | Any], *args: Any, **kwargs: Any):
+    def render(self, data: Union[list[Any], dict[str, list[Any] | Any | None]], *args: Any, **kwargs: Any):
         if not isinstance(data, list):
             data = data.get(self.results_field, [])
         return super().render(data, *args, **kwargs)
