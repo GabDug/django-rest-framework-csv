@@ -1,0 +1,76 @@
+[project]
+name = "djangorestframework-csv"
+authors = [
+    {name = "Mjumbe Wawatu Ukweli", email = "mjumbewu@gmail.com"},
+]
+maintainers = [
+    {name = "Gabriel Dugny", email = "git@dugny.me"}]
+description =  "CSV Tools for Django REST Framework"
+readme = "README.rst"
+requires-python = ">=3.8"
+license = {text = "BSD"}
+classifiers = [
+   "Development Status :: 4 - Beta",
+        "Environment :: Web Environment",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Framework :: Django",
+        "Framework :: Django :: 3.2",
+        "Framework :: Django :: 4.1",
+        "Framework :: Django :: 4.2",
+]
+dependencies = [
+    "djangorestframework>=3.0.0",
+    "typing_extensions",
+    "Django!=4.0.*,>=3.2",
+    "typing-extensions",
+]
+dynamic = ["version"]
+
+
+[project.urls]
+"Homepage" = "https://github.com/GabDug/django-rest-framework-csv"
+# "Changelog" = "https://github.com/GabDug/django-rest-framework-csv/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/GabDug/django-rest-framework-csv/issues"
+
+
+[tool.setuptools]
+packages = ["rest_framework_csv"]
+[tool.setuptools.dynamic]
+version = {attr = "rest_framework_csv.__version__"}
+
+
+
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "ruff>=0.0.287",
+    "black>=23.7.0",
+    "mypy>=1.5.1",
+]
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+
+
+[tool.black]
+line-length = 120
+target-version = ["py38"]
+
+
+[tool.ruff]
+line-length = 140
+respect-gitignore = true
+extend-select = ["Q000", "TCH", "I001", "S", "T", "PTH", "PYI", "RET", "D209", "D202", "EM101"]
+extend-ignore =["S101"]
+target-version = "py38"
