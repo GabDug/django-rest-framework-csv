@@ -50,7 +50,7 @@ REST_FRAMEWORK = {
 ## Ordered Fields
 
 By default, a `CSVRenderer` will output fields in sorted order. To
-specify an alternative field ordering you can override the `header`
+specify an alternative field ordering, you can override the `header`
 attribute. There are two ways to do this:
 
 1.  Create a new renderer class and override the `header` attribute
@@ -111,7 +111,8 @@ Using the renderer with paginated data is also possible with the new
 `PaginatedCSVRenderer` class and should be used with views
 that paginate data
 
-For more information about using renderers with Django REST Framework,see the [API Guide](http://django-rest-framework.org/api-guide/renderers/) or the [Tutorial](http://django-rest-framework.org/tutorial/1-serialization/).
+For more information about using renderers with Django REST Framework,
+see the [API Guide](http://django-rest-framework.org/api-guide/renderers/) or the [Tutorial](http://django-rest-framework.org/tutorial/1-serialization/).
 
 ## Running the tests
 
@@ -132,6 +133,7 @@ $ ./manage.py test
     `CSVRenderer`
 -   Rendering is now exclusively `UTF-8` encoded
 -   `CSVRenderer` now uses `io.StringIO` instead of `io.BytesIO`
+- Removed deprecated writer_opts attribute from CSVRenderer. Pass it in the context_renderer or on the class.
 
 ## 2.1.1
 
