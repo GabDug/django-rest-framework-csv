@@ -5,7 +5,7 @@ import csv
 from io import StringIO
 from logging import getLogger
 from types import GeneratorType
-from typing import Any, Generator, Iterable, Mapping, TypedDict
+from typing import Any, ClassVar, Generator, Iterable, Mapping, TypedDict
 
 from rest_framework.renderers import BaseRenderer
 
@@ -51,8 +51,8 @@ class CSVRenderer(BaseRenderer):
         data: list[Any] | Mapping[str, list[Any]] | Any | None,
         accepted_media_type: str | None = None,
         renderer_context: _RendererContext | None = None,  # type: ignore[override]
-    ) -> str | Generator[str, None, None]:
-        """Renders serialized *data* into CSV. For a dictionary:"""
+    ) -> str | Any:
+        """Renders serialized *data* into CSV."""
         if renderer_context is None:
             renderer_context = _RendererContext()
         if data is None:
@@ -243,7 +243,7 @@ class PaginatedCSVRenderer(CSVRenderer):
 
     results_field: str = "results"
 
-    def render(self, data: list[Any] | Mapping[str, list[Any] | Any | None], *args: Any, **kwargs: Any):
+    def render(self, data: list[Any] | Mapping[str, list[Any] | Any | None] | Any | None, *args: Any, **kwargs: Any):
         if not isinstance(data, list):
             data = data.get(self.results_field, [])
         return super().render(data, *args, **kwargs)
@@ -254,6 +254,6 @@ class TSVRenderer(CSVRenderer):
 
     media_type = "text/tab-separated-values"
     format = "tsv"
-    writer_opts = {
+    writer_opts: _CSVWriterOpts = {
         "dialect": "excel-tab",
     }

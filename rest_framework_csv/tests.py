@@ -9,29 +9,29 @@ from typing import Any
 from django.test import TestCase
 
 from .parsers import CSVParser
-from .renderers import CSVRenderer, CSVStreamingRenderer, PaginatedCSVRenderer
+from .renderers import CSVRenderer, CSVStreamingRenderer, PaginatedCSVRenderer, _CSVWriterOpts
 
 
 class TestCSVRenderer(TestCase):
     def test_tablize_a_list_with_no_elements(self):
         renderer = CSVRenderer()
 
-        flat = renderer.tablize([])
-        flat = list(flat)
+        flat_gen = renderer.tablize([])
+        flat = list(flat_gen)
         assert flat == []
 
     def test_tablize_a_list_with_atomic_elements(self):
         renderer = CSVRenderer()
 
-        flat = renderer.tablize([1, 2, "hello"])
-        flat = list(flat)
+        flat_gen = renderer.tablize([1, 2, "hello"])
+        flat = list(flat_gen)
         assert flat == [[""], [1], [2], ["hello"]]
 
     def test_tablize_a_list_with_list_elements(self):
         renderer = CSVRenderer()
 
-        flat = renderer.tablize([[1, 2, 3], [4, 5], [6, 7, [8, 9]]])
-        flat = list(flat)
+        flat_gen = renderer.tablize([[1, 2, 3], [4, 5], [6, 7, [8, 9]]])
+        flat = list(flat_gen)
         assert flat == [
             ["0", "1", "2", "2.0", "2.1"],
             [1, 2, 3, None, None],
@@ -42,15 +42,15 @@ class TestCSVRenderer(TestCase):
     def test_tablize_a_list_with_dictionary_elements(self):
         renderer = CSVRenderer()
 
-        flat = renderer.tablize([{"a": 1, "b": 2}, {"b": 3, "c": {"x": 4, "y": 5}}])
-        flat = list(flat)
+        flat_gen = renderer.tablize([{"a": 1, "b": 2}, {"b": 3, "c": {"x": 4, "y": 5}}])
+        flat = list(flat_gen)
         assert flat == [["a", "b", "c.x", "c.y"], [1, 2, None, None], [None, 3, 4, 5]]
 
     def test_tablize_a_list_with_mixed_elements(self):
         renderer = CSVRenderer()
 
-        flat = renderer.tablize([{"a": 1, "b": 2}, {"b": 3, "c": [4, 5]}, 6])
-        flat = list(flat)
+        flat_gen = renderer.tablize([{"a": 1, "b": 2}, {"b": 3, "c": [4, 5]}, 6])
+        flat = list(flat_gen)
         assert flat == [
             ["", "a", "b", "c.0", "c.1"],
             [None, 1, 2, None, None],
@@ -61,15 +61,15 @@ class TestCSVRenderer(TestCase):
     def test_tablize_a_list_with_unicode_elements(self):
         renderer = CSVRenderer()
 
-        flat = renderer.tablize([{"a": 1, "b": "hello\u2014goodbye"}])
-        flat = list(flat)
+        flat_gen = renderer.tablize([{"a": 1, "b": "hello\u2014goodbye"}])
+        flat = list(flat_gen)
         assert flat == [["a", "b"], [1, "hello—goodbye"]]
 
     def test_tablize_with_labels(self):
         renderer = CSVRenderer()
 
-        flat = renderer.tablize([{"a": 1, "b": 2}, {"b": 3, "c": [4, 5]}, 6], labels={"a": "A", "c.0": "0c"})
-        flat = list(flat)
+        flat_gen = renderer.tablize([{"a": 1, "b": 2}, {"b": 3, "c": [4, 5]}, 6], labels={"a": "A", "c.0": "0c"})
+        flat = list(flat_gen)
         assert flat == [
             ["", "A", "b", "0c", "c.1"],
             [None, 1, 2, None, None],
@@ -117,7 +117,7 @@ class TestCSVRenderer(TestCase):
         renderer = CSVRenderer()
         renderer.header = ["a", "b"]
         data = [{"a": "test", "b": "hello"}, {"a": "foo", "b": "bar"}]
-        writer_opts = {
+        writer_opts: _CSVWriterOpts = {
             "quoting": csv.QUOTE_ALL,
             "quotechar": "|",
             "delimiter": ";",
@@ -132,7 +132,7 @@ class TestCSVRenderer(TestCase):
         renderer = CSVRenderer()
         renderer.header = ["a", "b"]
         data = [{"a": "test", "b": "hello"}, {"a": "foo", "b": "bar"}]
-        writer_opts: dict[str, Any] = {
+        writer_opts: _CSVWriterOpts = {
             "quoting": csv.QUOTE_ALL,
             "quotechar": "|",
             "delimiter": ";",

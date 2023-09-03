@@ -67,4 +67,4 @@ class CSVParser(BaseParser):
 
             return data
         except Exception as exc:
-            raise ParseError("CSV parse error - %s" % str(exc))
+            raise ParseError("CSV parse error - %s" % str(exc)) from exc
