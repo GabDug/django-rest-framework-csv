@@ -1,31 +1,33 @@
+from __future__ import annotations
+
 from django.core.urlresolvers import reverse
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import list_route
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
+
+from example.models import Talk
+from example.serializers import TalkSerializer
 from rest_framework_csv.parsers import CSVParser
 from rest_framework_csv.renderers import CSVRenderer
-from example.serializers import TalkSerializer
-from example.models import Talk
 
 
 class TalkViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows talks to be viewed or edited.
     """
+
     queryset = Talk.objects.all()
     parser_classes = (CSVParser,) + tuple(api_settings.DEFAULT_PARSER_CLASSES)
     renderer_classes = (CSVRenderer,) + tuple(api_settings.DEFAULT_RENDERER_CLASSES)
     serializer_class = TalkSerializer
 
     def get_renderer_context(self):
-        context = super(TalkViewSet, self).get_renderer_context()
-        context['header'] = (
-            self.request.GET['fields'].split(',')
-            if 'fields' in self.request.GET else None)
+        context = super().get_renderer_context()
+        context["header"] = self.request.GET["fields"].split(",") if "fields" in self.request.GET else None
         return context
 
-    @list_route(methods=['POST'])
+    @list_route(methods=["POST"])
     def bulk_upload(self, request, *args, **kwargs):
         """
         Try out this view with the following curl command:
@@ -40,4 +42,4 @@ class TalkViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_303_SEE_OTHER, headers={'Location': reverse('talk-list')})
+        return Response(serializer.data, status=status.HTTP_303_SEE_OTHER, headers={"Location": reverse("talk-list")})

@@ -9,3 +9,4 @@ build/
 /.pydevproject
 /.project
 .tox/
+.pdm-python

@@ -1,67 +1,85 @@
-from __future__ import unicode_literals
+from __future__ import annotations
+
 import codecs
-import unicodecsv as csv
-from django.conf import settings
-from rest_framework.renderers import *
-from six import BytesIO, text_type
-from rest_framework_csv.orderedrows import OrderedRows
-from rest_framework_csv.misc import Echo
-from types import GeneratorType
-
+import csv
+from io import StringIO
 from logging import getLogger
-log = getLogger(__name__)
+from types import GeneratorType
+from typing import Any, Generator, Iterable, Mapping, TypedDict
 
-# six versions 1.3.0 and previous don't have PY2
-try:
-    from six import PY2
-except ImportError:
-    import sys
-    PY2 = sys.version_info[0] == 2
+from rest_framework.renderers import BaseRenderer
+
+from rest_framework_csv.misc import Echo
+
+_logger = getLogger(__name__)
+
+
+class _CSVWriterOpts(TypedDict, total=False):
+    dialect: csv.Dialect | type[csv.Dialect] | str
+    delimiter: str
+    quotechar: str
+    escapechar: str
+    doublequote: bool
+    skipinitialspace: bool
+    lineterminator: str
+    quoting: int
+    strict: bool
+
+
+class _RendererContext(TypedDict, total=False):
+    writer_opts: _CSVWriterOpts
+    header: list[str]
+    labels: dict[str, str]
+    bom: bool
 
 
 class CSVRenderer(BaseRenderer):
-    """
-    Renderer which serializes to CSV
-    """
+    """Renderer which serializes to CSV."""
 
-    media_type = 'text/csv'
-    format = 'csv'
-    level_sep = '.'
-    header = None
-    labels = None  # {'<field>':'<label>'}
-    writer_opts = None
+    media_type: str = "text/csv"
+    # XXX(dugab): specify optional parameters chartset and header?
+    # https://datatracker.ietf.org/doc/html/rfc4180#section-3
 
-    def render(self, data, media_type=None, renderer_context={}, writer_opts=None):
-        """
-        Renders serialized *data* into CSV. For a dictionary:
-        """
+    format: str = "csv"
+    level_sep: str = "."
+    header: list[str] | None = None
+    labels: dict[str, str] | None = None  # {'<field>':'<label>'}
+    writer_opts: _CSVWriterOpts | None = None
+
+    def render(
+        self,
+        data: list[Any] | Mapping[str, list[Any]] | Any | None,
+        accepted_media_type: str | None = None,
+        renderer_context: _RendererContext | None = None,  # type: ignore[override]
+    ) -> str | Any:
+        """Renders serialized *data* into CSV."""
+        if renderer_context is None:
+            renderer_context = _RendererContext()
         if data is None:
-            return ''
+            return ""
 
         if not isinstance(data, list):
             data = [data]
 
-        if writer_opts is not None:
-            log.warning('The writer_opts argument is deprecated. Set the '
-                        'writer_opts on the renderer class, instance, or pass '
-                        'writer_opts into the renderer_context instead.')
-
-        writer_opts = renderer_context.get('writer_opts', writer_opts or self.writer_opts or {})
-        header = renderer_context.get('header', self.header)
-        labels = renderer_context.get('labels', self.labels)
-        encoding = renderer_context.get('encoding', settings.DEFAULT_CHARSET)
+        writer_opts = renderer_context.get("writer_opts", self.writer_opts or _CSVWriterOpts())
+        header = renderer_context.get("header", self.header)
+        labels = renderer_context.get("labels", self.labels)
 
         table = self.tablize(data, header=header, labels=labels)
-        csv_buffer = BytesIO()
-        csv_writer = csv.writer(csv_buffer, encoding=encoding, **writer_opts)
+        csv_buffer = StringIO()
+        csv_writer = csv.writer(csv_buffer, **writer_opts)
         for row in table:
             csv_writer.writerow(row)
 
         return csv_buffer.getvalue()
 
-    def tablize(self, data, header=None, labels=None):
-        """
-        Convert a list of data into a table.
+    def tablize(
+        self,
+        data: Any | None,
+        header: list[str] | None = None,
+        labels: Mapping[str, str] | None = None,
+    ) -> Generator[list[Any], None, None]:
+        """Convert a list of data into a table.
 
         If there is a header provided to tablize it will efficiently yield each
         row as needed. If no header is provided, tablize will need to process
@@ -72,7 +90,7 @@ class CSVRenderer(BaseRenderer):
         """
         # Try to pull the header off of the data, if it's not passed in as an
         # argument.
-        if not header and hasattr(data, 'header'):
+        if not header and hasattr(data, "header"):
             header = data.header
 
         if data:
@@ -87,7 +105,7 @@ class CSVRenderer(BaseRenderer):
                 # We don't have to materialize the data generator unless we
                 # have to build a header.
                 data = tuple(data)
-                header_fields = set()
+                header_fields: set[str] = set()
                 for item in data:
                     header_fields.update(list(item.keys()))
                 header = sorted(header_fields)
@@ -115,9 +133,8 @@ class CSVRenderer(BaseRenderer):
             # Generator will yield nothing if there's no data and no header
             pass
 
-    def flatten_data(self, data):
-        """
-        Convert the given data collection to a list of dictionaries that are
+    def flatten_data(self, data: Iterable[Any]) -> Generator[dict[str, Any], None, None]:
+        """Convert the given data collection to a list of dictionaries that are
         each exactly one level deep. The key for each value in the dictionaries
         designates the name of the column that the value will fall into.
         """
@@ -125,19 +142,18 @@ class CSVRenderer(BaseRenderer):
             flat_item = self.flatten_item(item)
             yield flat_item
 
-    def flatten_item(self, item):
+    def flatten_item(self, item: Any) -> dict[str, Any]:
         if isinstance(item, list):
             flat_item = self.flatten_list(item)
         elif isinstance(item, dict):
             flat_item = self.flatten_dict(item)
         else:
-            flat_item = {'': item}
+            flat_item = {"": item}
 
         return flat_item
 
-    def nest_flat_item(self, flat_item, prefix):
-        """
-        Given a "flat item" (a dictionary exactly one level deep), nest all of
+    def nest_flat_item(self, flat_item: dict[str, Any], prefix: str) -> dict[str, Any]:
+        """Given a "flat item" (a dictionary exactly one level deep), nest all of
         the column headers in a namespace designated by prefix.  For example:
 
          header... | with prefix... | becomes...
@@ -153,51 +169,37 @@ class CSVRenderer(BaseRenderer):
             nested_item[nested_header] = val
         return nested_item
 
-    def flatten_list(self, l):
+    def flatten_list(self, l: list[Any]) -> dict[str, Any]:  # noqa: E741
         flat_list = {}
         for index, item in enumerate(l):
-            index = text_type(index)
+            index_str = str(index)
             flat_item = self.flatten_item(item)
-            nested_item = self.nest_flat_item(flat_item, index)
+            nested_item = self.nest_flat_item(flat_item, index_str)
             flat_list.update(nested_item)
         return flat_list
 
-    def flatten_dict(self, d):
+    def flatten_dict(self, d: dict[str, Any]) -> dict[str, Any]:
         flat_dict = {}
         for key, item in d.items():
-            key = text_type(key)
+            key = str(key)
             flat_item = self.flatten_item(item)
             nested_item = self.nest_flat_item(flat_item, key)
             flat_dict.update(nested_item)
         return flat_dict
 
-    def headers():
-        doc = ("The headers property. Kept around for backward compatibility."
-               "Use the header attribute instead.")
-        def fget(self):
-            log.warning('The CSVRenderer.headers property is deprecated. '
-                        'Use CSVRenderer.header instead.')
-            return self.header
-        def fset(self, value):
-            log.warning('The CSVRenderer.headers property is deprecated. '
-                        'Use CSVRenderer.header instead.')
-            self.header = value
-        def fdel(self):
-            log.warning('The CSVRenderer.headers property is deprecated. '
-                        'Use CSVRenderer.header instead.')
-            del self.header
-        return locals()
-    headers = property(**headers())
-
 
 class CSVRendererWithUnderscores(CSVRenderer):
-    level_sep = '_'
+    level_sep: str = "_"
 
 
 class CSVStreamingRenderer(CSVRenderer):
-    def render(self, data, media_type=None, renderer_context={}):
-        """
-        Renders serialized *data* into CSV to be used with Django
+    def render(
+        self,
+        data: Any | None,
+        media_type: str | None = None,
+        renderer_context: _RendererContext | None = None,  # type: ignore[override]
+    ) -> Generator[str, None, None]:
+        """Renders serialized *data* into CSV to be used with Django
         StreamingHttpResponse. We need to return a generator here, so Django
         can iterate over it, rendering and returning each line.
 
@@ -211,37 +213,47 @@ class CSVStreamingRenderer(CSVRenderer):
         >>> # return response
 
         """
+        if renderer_context is None:
+            renderer_context = {}
         if data is None:
-            yield ''
+            yield ""
 
-        self.labels = renderer_context.get('labels', self.labels)
+        self.labels = renderer_context.get("labels", self.labels)
 
         if not isinstance(data, GeneratorType) and not isinstance(data, list):
             data = [data]
 
-        writer_opts = renderer_context.get('writer_opts', self.writer_opts or {})
-        header = renderer_context.get('header', self.header)
-        labels = renderer_context.get('labels', self.labels)
-        encoding = renderer_context.get('encoding', settings.DEFAULT_CHARSET)
-        bom = renderer_context.get('bom', False)
+        writer_opts = renderer_context.get("writer_opts", self.writer_opts or {})
+        header = renderer_context.get("header", self.header)
+        labels = renderer_context.get("labels", self.labels)
+        bom = renderer_context.get("bom", False)
 
-        if bom and encoding == settings.DEFAULT_CHARSET:
-            yield codecs.BOM_UTF8
+        if bom:
+            yield str(codecs.BOM_UTF8)
 
         table = self.tablize(data, header=header, labels=labels)
-        csv_buffer = Echo()
-        csv_writer = csv.writer(csv_buffer, encoding=encoding, **writer_opts)
+        csv_buffer = Echo[str]()
+        csv_writer = csv.writer(csv_buffer, **writer_opts)
         for row in table:
             yield csv_writer.writerow(row)
 
 
-class PaginatedCSVRenderer (CSVRenderer):
-    """
-    Paginated renderer (when pagination is turned on for DRF)
-    """
-    results_field = 'results'
+class PaginatedCSVRenderer(CSVRenderer):
+    """Paginated renderer (when pagination is turned on for DRF)."""
 
-    def render(self, data, *args, **kwargs):
+    results_field: str = "results"
+
+    def render(self, data: list[Any] | Mapping[str, list[Any] | Any | None] | Any | None, *args: Any, **kwargs: Any):
         if not isinstance(data, list):
             data = data.get(self.results_field, [])
-        return super(PaginatedCSVRenderer, self).render(data, *args, **kwargs)
+        return super().render(data, *args, **kwargs)
+
+
+class TSVRenderer(CSVRenderer):
+    """Renderer which serializes to TSV."""
+
+    media_type = "text/tab-separated-values"
+    format = "tsv"
+    writer_opts: _CSVWriterOpts = {  # noqa: RUF012
+        "dialect": "excel-tab",
+    }
