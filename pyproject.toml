@@ -1,12 +1,12 @@
 [project]
-name = "djangorestframework-csv"
+name = "djangorestframework-csv-3"
 authors = [
     {name = "Mjumbe Wawatu Ukweli", email = "mjumbewu@gmail.com"},
 ]
 maintainers = [
     {name = "Gabriel Dugny", email = "git@dugny.me"}]
 description =  "CSV Tools for Django REST Framework"
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "BSD"}
 classifiers = [
