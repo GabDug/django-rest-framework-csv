@@ -3,15 +3,12 @@ from __future__ import annotations
 import codecs
 import csv
 from io import StringIO
-from logging import getLogger
 from types import GeneratorType
 from typing import Any, Generator, Iterable, Mapping, TypedDict
 
 from rest_framework.renderers import BaseRenderer
 
 from rest_framework_csv.misc import Echo
-
-_logger = getLogger(__name__)
 
 
 class _CSVWriterOpts(TypedDict, total=False):
@@ -101,14 +98,7 @@ class CSVRenderer(BaseRenderer):
             data = self.flatten_data(data)
 
             # Get the set of all unique headers, and sort them (unless already provided).
-            if not header:
-                # We don't have to materialize the data generator unless we
-                # have to build a header.
-                data = tuple(data)
-                header_fields: set[str] = set()
-                for item in data:
-                    header_fields.update(list(item.keys()))
-                header = sorted(header_fields)
+            data, header = self.get_headers(data, header)
 
             # Return your "table", with the headers as the first row.
             if labels:
@@ -132,6 +122,22 @@ class CSVRenderer(BaseRenderer):
         else:
             # Generator will yield nothing if there's no data and no header
             pass
+
+    def get_headers(
+        self, data: Iterable[Mapping[str, Any]], header: None | list[str]
+    ) -> tuple[Iterable[Mapping[str, Any]], list[str]]:
+        """Get the set of all unique headers, and sort them (unless already provided)."""
+        if header:
+            return data, header
+
+        # We don't have to materialize the data generator unless we
+        # have to build a header.
+        data = tuple(data)
+        header_fields: set[str] = set()
+        for item in data:
+            header_fields.update(list(item.keys()))
+        header = sorted(header_fields)
+        return data, header
 
     def flatten_data(self, data: Iterable[Any]) -> Generator[dict[str, Any], None, None]:
         """Convert the given data collection to a list of dictionaries that are

@@ -150,10 +150,11 @@ To run the tests against the current environment:
 - Drop support for unsupported versions of Django and Python
   - Django: 3.2, 4.1 and 4.2 are supported
   - Python: 3.8, 3.9, 3.10 and 3.11 are supported
-- Removed deprecated `writer_opts` attribute from `CSVRenderer`. Pass it in the `context_renderer` or on the class.
-- Removed deprecated `headers` attribute from `CSVRenderer`
+- Removed deprecated `writer_opts` parameter from `CSVRenderer.render(...)`. Pass it in the `context_renderer` or on the class.
+- Removed deprecated `headers` property from `CSVRenderer`
 - Rendering is now exclusively `UTF-8` encoded
 - `CSVRenderer` now uses `io.StringIO` instead of `io.BytesIO`
+- Added `get_headers(...)` to `CSVRenderer`, used in `tablize(...)` to ease customization
 
 ## 2.1.1
 
