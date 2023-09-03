@@ -3,7 +3,7 @@ import csv
 from io import StringIO
 from logging import getLogger
 from types import GeneratorType
-from typing import Any, Generator, Iterable
+from typing import Any, Generator, Iterable, TypedDict, cast
 
 from rest_framework.renderers import BaseRenderer
 
@@ -12,28 +12,47 @@ from rest_framework_csv.misc import Echo
 log = getLogger(__name__)
 
 
+class _CSVWriterOpts(TypedDict, total=False):
+    delimiter: str
+    quotechar: str
+    escapechar: str
+    doublequote: bool
+    skipinitialspace: bool
+    lineterminator: str
+    quoting: int
+    strict: bool
+
+
+class _RendererContext(TypedDict, total=False):
+    writer_opts: _CSVWriterOpts
+    header: list[str]
+    labels: dict[str, str]
+    bom: bool
+
+
 class CSVRenderer(BaseRenderer):
-    """
-    Renderer which serializes to CSV
-    """
+    """Renderer which serializes to CSV."""
 
     media_type: str = "text/csv"
+    # XXX(dugab): specify optional parameters chartset and header?
+    # https://datatracker.ietf.org/doc/html/rfc4180#section-3
+
     format: str = "csv"
     level_sep: str = "."
     header: list[str] | None = None
     labels: dict[str, str] | None = None  # {'<field>':'<label>'}
-    writer_opts: dict[str, Any] | None = None
+    writer_opts: _CSVWriterOpts | None = None
 
     def render(
         self,
         data,
-        media_type=None,
-        renderer_context: dict[str, Any] = {},
-        writer_opts: dict[str, Any] | None = None,
-    ):
-        """
-        Renders serialized *data* into CSV. For a dictionary:
-        """
+        accepted_media_type: str | None = None,
+        renderer_context: _RendererContext | None = None,
+        writer_opts: _CSVWriterOpts | None = None,
+    ) -> str:
+        """Renders serialized *data* into CSV. For a dictionary:"""
+        if renderer_context is None:
+            renderer_context = {}
         if data is None:
             return ""
 
@@ -44,10 +63,10 @@ class CSVRenderer(BaseRenderer):
             log.warning(
                 "The writer_opts argument is deprecated. Set the "
                 "writer_opts on the renderer class, instance, or pass "
-                "writer_opts into the renderer_context instead."
+                "writer_opts into the renderer_context instead.",
             )
 
-        writer_opts: dict[str, Any] = renderer_context.get("writer_opts", writer_opts or self.writer_opts or {})
+        writer_opts = cast(_CSVWriterOpts, renderer_context.get("writer_opts", writer_opts or self.writer_opts or {}))
         header = renderer_context.get("header", self.header)
         labels = renderer_context.get("labels", self.labels)
 
@@ -60,10 +79,12 @@ class CSVRenderer(BaseRenderer):
         return csv_buffer.getvalue()
 
     def tablize(
-        self, data: Any, header: Any | None = None, labels: Any | None = None
+        self,
+        data: Any,
+        header: Any | None = None,
+        labels: Any | None = None,
     ) -> Generator[list[Any], None, None]:
-        """
-        Convert a list of data into a table.
+        """Convert a list of data into a table.
 
         If there is a header provided to tablize it will efficiently yield each
         row as needed. If no header is provided, tablize will need to process
@@ -118,8 +139,7 @@ class CSVRenderer(BaseRenderer):
             pass
 
     def flatten_data(self, data: Iterable[Any]) -> Generator[dict[str, Any], None, None]:
-        """
-        Convert the given data collection to a list of dictionaries that are
+        """Convert the given data collection to a list of dictionaries that are
         each exactly one level deep. The key for each value in the dictionaries
         designates the name of the column that the value will fall into.
         """
@@ -127,7 +147,7 @@ class CSVRenderer(BaseRenderer):
             flat_item = self.flatten_item(item)
             yield flat_item
 
-    def flatten_item(self, item):
+    def flatten_item(self, item: Any) -> dict[str, Any]:
         if isinstance(item, list):
             flat_item = self.flatten_list(item)
         elif isinstance(item, dict):
@@ -138,8 +158,7 @@ class CSVRenderer(BaseRenderer):
         return flat_item
 
     def nest_flat_item(self, flat_item: dict[str, Any], prefix: str) -> dict[str, Any]:
-        """
-        Given a "flat item" (a dictionary exactly one level deep), nest all of
+        """Given a "flat item" (a dictionary exactly one level deep), nest all of
         the column headers in a namespace designated by prefix.  For example:
 
          header... | with prefix... | becomes...
@@ -179,9 +198,10 @@ class CSVRendererWithUnderscores(CSVRenderer):
 
 
 class CSVStreamingRenderer(CSVRenderer):
-    def render(self, data, media_type=None, renderer_context: dict[str, Any] = {}) -> Generator[str, None, None]:
-        """
-        Renders serialized *data* into CSV to be used with Django
+    def render(
+        self, data, media_type=None, renderer_context: _RendererContext | None = None
+    ) -> Generator[str, None, None]:
+        """Renders serialized *data* into CSV to be used with Django
         StreamingHttpResponse. We need to return a generator here, so Django
         can iterate over it, rendering and returning each line.
 
@@ -195,6 +215,8 @@ class CSVStreamingRenderer(CSVRenderer):
         >>> # return response
 
         """
+        if renderer_context is None:
+            renderer_context = {}
         if data is None:
             yield ""
 
@@ -203,7 +225,7 @@ class CSVStreamingRenderer(CSVRenderer):
         if not isinstance(data, GeneratorType) and not isinstance(data, list):
             data = [data]
 
-        writer_opts = renderer_context.get("writer_opts", self.writer_opts or {})
+        writer_opts = cast(_CSVWriterOpts, renderer_context.get("writer_opts", self.writer_opts or {}))
         header = renderer_context.get("header", self.header)
         labels = renderer_context.get("labels", self.labels)
         bom = renderer_context.get("bom", False)
@@ -219,9 +241,7 @@ class CSVStreamingRenderer(CSVRenderer):
 
 
 class PaginatedCSVRenderer(CSVRenderer):
-    """
-    Paginated renderer (when pagination is turned on for DRF)
-    """
+    """Paginated renderer (when pagination is turned on for DRF)."""
 
     results_field: str = "results"
 

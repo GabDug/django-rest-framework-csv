@@ -10,7 +10,7 @@ INSTALLED_APPS = (
     "rest_framework_csv",
 )
 
-SECRET_KEY = "testsecretkey"
+SECRET_KEY = "testsecretkey"  # noqa: S105
 
 MIDDLEWARE_CLASSES = (
     "django.middleware.common.CommonMiddleware",

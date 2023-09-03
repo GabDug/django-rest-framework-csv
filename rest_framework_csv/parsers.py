@@ -1,19 +1,29 @@
 from __future__ import annotations
 
 import csv
-from typing import TYPE_CHECKING, Generator, Iterable
+from typing import IO, Any, Generator, Generic, Iterable, Mapping, TypeVar
 
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
 from rest_framework_csv.orderedrows import OrderedRows
 
-if TYPE_CHECKING:
-    import io
+_Data = TypeVar("_Data")
+_Files = TypeVar("_Files")
+
+
+class _DataAndFiles(Generic[_Data, _Files]):
+    data: _Data
+    files: _Files
+
+    def __init__(self, data: _Data, files: _Files) -> None:
+        ...
 
 
 def unicode_csv_reader(
-    csv_data: Iterable[str], dialect: "csv._DialectLike" = csv.excel, **kwargs
+    csv_data: Iterable[str],
+    dialect: csv._DialectLike = csv.excel,
+    **kwargs,
 ) -> Generator[list[str], None, None]:
     csv_reader = csv.reader(csv_data, dialect=dialect, **kwargs)
     yield from csv_reader
@@ -30,8 +40,7 @@ def universal_newlines(stream) -> Generator[str, None, None]:
 
 
 class CSVParser(BaseParser):
-    """
-    Parses CSV serialized data.
+    """Parses CSV serialized data.
 
     The parser assumes the first line contains the column names.
     """
@@ -40,15 +49,15 @@ class CSVParser(BaseParser):
 
     def parse(
         self,
-        stream: io.BytesIO | io.StringIO | io.TextIOWrapper,
-        media_type=None,
-        parser_context=None,
-    ):
+        stream: IO[Any],
+        media_type: str | None = None,
+        parser_context: Mapping[str, Any] | None = None,
+    ) -> Mapping[Any, Any] | _DataAndFiles:
         parser_context = parser_context or {}
         delimiter: str = parser_context.get("delimiter", ",")
 
         try:
-            strdata = stream.read()
+            strdata: str | bytes = stream.read()
             binary = universal_newlines(strdata)
             rows = unicode_csv_reader(binary, delimiter=delimiter)
             data = OrderedRows(next(rows))
