@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.core.urlresolvers import reverse
 from rest_framework import status, viewsets
 from rest_framework.decorators import list_route
@@ -21,7 +23,7 @@ class TalkViewSet(viewsets.ModelViewSet):
     serializer_class = TalkSerializer
 
     def get_renderer_context(self):
-        context = super(TalkViewSet, self).get_renderer_context()
+        context = super().get_renderer_context()
         context["header"] = self.request.GET["fields"].split(",") if "fields" in self.request.GET else None
         return context
 

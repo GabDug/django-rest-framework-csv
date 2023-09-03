@@ -6,8 +6,6 @@ from typing import IO, Any, Generator, Generic, Iterable, Mapping, TypeVar
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
-from rest_framework_csv.orderedrows import OrderedRows
-
 _Data = TypeVar("_Data")
 _Files = TypeVar("_Files")
 
@@ -55,15 +53,18 @@ class CSVParser(BaseParser):
     ) -> Mapping[Any, Any] | _DataAndFiles:
         parser_context = parser_context or {}
         delimiter: str = parser_context.get("delimiter", ",")
-
         try:
             strdata: str | bytes = stream.read()
             binary = universal_newlines(strdata)
             rows = unicode_csv_reader(binary, delimiter=delimiter)
-            data = OrderedRows(next(rows))
+
+            header = [c.strip() for c in next(rows)]
+            data = []
+
             for row in rows:
-                row_data = dict(zip(data.header, row))
+                row_data = dict(zip(header, row))
                 data.append(row_data)
+
             return data
         except Exception as exc:
             raise ParseError("CSV parse error - %s" % str(exc))

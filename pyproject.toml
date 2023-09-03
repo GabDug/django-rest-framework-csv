@@ -71,13 +71,15 @@ build-backend = "setuptools.build_meta"
 line-length = 120
 target-version = ["py38"]
 
-
 [tool.ruff]
 line-length = 140
 respect-gitignore = true
-extend-select = ["Q000", "TCH", "I001", "S", "T", "PTH", "PYI", "RET", "D209", "D202", "EM101"]
+extend-select = ["Q000", "TCH", "I001", "S", "T", "PTH", "PYI", "RET", "D209", "D202", "EM101", "UP", "PERF", "I"]
 extend-ignore =["S101"]
 target-version = "py38"
+
+[tool.ruff.isort]
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.per-file-ignores]
 "example/*" = ["E501", "F401", "S105"]
@@ -85,9 +87,7 @@ target-version = "py38"
 [tool.mypy]
 files = ["rest_framework_csv"]
 python_version = "3.8"
-
 check_untyped_defs = true
-
 
 [tool.tox]
 legacy_tox_ini = """

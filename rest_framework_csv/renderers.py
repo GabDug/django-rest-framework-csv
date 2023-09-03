@@ -5,7 +5,7 @@ import csv
 from io import StringIO
 from logging import getLogger
 from types import GeneratorType
-from typing import Any, Dict, Generator, Iterable, List, Mapping, Optional, Type, TypedDict, Union
+from typing import Any, Generator, Iterable, Mapping, TypedDict
 
 from rest_framework.renderers import BaseRenderer
 
@@ -15,7 +15,7 @@ _logger = getLogger(__name__)
 
 
 class _CSVWriterOpts(TypedDict, total=False):
-    dialect: csv.Dialect | Type[csv.Dialect] | str
+    dialect: csv.Dialect | type[csv.Dialect] | str
     delimiter: str
     quotechar: str
     escapechar: str
@@ -28,8 +28,8 @@ class _CSVWriterOpts(TypedDict, total=False):
 
 class _RendererContext(TypedDict, total=False):
     writer_opts: _CSVWriterOpts
-    header: List[str]
-    labels: Dict[str, str]
+    header: list[str]
+    labels: dict[str, str]
     bom: bool
 
 
@@ -42,15 +42,15 @@ class CSVRenderer(BaseRenderer):
 
     format: str = "csv"
     level_sep: str = "."
-    header: Optional[List[str]] = None
-    labels: Optional[Dict[str, str]] = None  # {'<field>':'<label>'}
-    writer_opts: Optional[_CSVWriterOpts] = None
+    header: list[str] | None = None
+    labels: dict[str, str] | None = None  # {'<field>':'<label>'}
+    writer_opts: _CSVWriterOpts | None = None
 
     def render(
         self,
-        data: Union[List[Any], Dict[str, list[Any]], Any, None],
-        accepted_media_type: Optional[str] = None,
-        renderer_context: Optional[_RendererContext] = None,  # type: ignore[override]
+        data: list[Any] | Mapping[str, list[Any]] | Any | None,
+        accepted_media_type: str | None = None,
+        renderer_context: _RendererContext | None = None,  # type: ignore[override]
     ) -> str | Generator[str, None, None]:
         """Renders serialized *data* into CSV. For a dictionary:"""
         if renderer_context is None:
@@ -75,10 +75,10 @@ class CSVRenderer(BaseRenderer):
 
     def tablize(
         self,
-        data: Optional[Any],
-        header: Optional[List[str]] = None,
-        labels: Optional[Mapping[str, str]] = None,
-    ) -> Generator[List[Any], None, None]:
+        data: Any | None,
+        header: list[str] | None = None,
+        labels: Mapping[str, str] | None = None,
+    ) -> Generator[list[Any], None, None]:
         """Convert a list of data into a table.
 
         If there is a header provided to tablize it will efficiently yield each
@@ -133,7 +133,7 @@ class CSVRenderer(BaseRenderer):
             # Generator will yield nothing if there's no data and no header
             pass
 
-    def flatten_data(self, data: Iterable[Any]) -> Generator[Dict[str, Any], None, None]:
+    def flatten_data(self, data: Iterable[Any]) -> Generator[dict[str, Any], None, None]:
         """Convert the given data collection to a list of dictionaries that are
         each exactly one level deep. The key for each value in the dictionaries
         designates the name of the column that the value will fall into.
@@ -142,7 +142,7 @@ class CSVRenderer(BaseRenderer):
             flat_item = self.flatten_item(item)
             yield flat_item
 
-    def flatten_item(self, item: Any) -> Dict[str, Any]:
+    def flatten_item(self, item: Any) -> dict[str, Any]:
         if isinstance(item, list):
             flat_item = self.flatten_list(item)
         elif isinstance(item, dict):
@@ -152,7 +152,7 @@ class CSVRenderer(BaseRenderer):
 
         return flat_item
 
-    def nest_flat_item(self, flat_item: Dict[str, Any], prefix: str) -> dict[str, Any]:
+    def nest_flat_item(self, flat_item: dict[str, Any], prefix: str) -> dict[str, Any]:
         """Given a "flat item" (a dictionary exactly one level deep), nest all of
         the column headers in a namespace designated by prefix.  For example:
 
@@ -169,7 +169,7 @@ class CSVRenderer(BaseRenderer):
             nested_item[nested_header] = val
         return nested_item
 
-    def flatten_list(self, l: List[Any]) -> Dict[str, Any]:  # noqa: E741
+    def flatten_list(self, l: list[Any]) -> dict[str, Any]:  # noqa: E741
         flat_list = {}
         for index, item in enumerate(l):
             index_str = str(index)
@@ -195,9 +195,9 @@ class CSVRendererWithUnderscores(CSVRenderer):
 class CSVStreamingRenderer(CSVRenderer):
     def render(
         self,
-        data: Optional[Any],
+        data: Any | None,
         media_type: str | None = None,
-        renderer_context: Optional[_RendererContext] = None,  # type: ignore[override]
+        renderer_context: _RendererContext | None = None,  # type: ignore[override]
     ) -> Generator[str, None, None]:
         """Renders serialized *data* into CSV to be used with Django
         StreamingHttpResponse. We need to return a generator here, so Django
@@ -243,7 +243,7 @@ class PaginatedCSVRenderer(CSVRenderer):
 
     results_field: str = "results"
 
-    def render(self, data: Union[list[Any], dict[str, list[Any] | Any | None]], *args: Any, **kwargs: Any):
+    def render(self, data: list[Any] | Mapping[str, list[Any] | Any | None], *args: Any, **kwargs: Any):
         if not isinstance(data, list):
             data = data.get(self.results_field, [])
         return super().render(data, *args, **kwargs)
