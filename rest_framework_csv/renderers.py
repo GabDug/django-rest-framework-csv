@@ -1,14 +1,13 @@
 import codecs
-from io import StringIO
-from typing import Any, Generator, Iterable
 import csv
-from django.conf import settings
+from io import StringIO
+from logging import getLogger
+from types import GeneratorType
+from typing import Any, Generator, Iterable
+
 from rest_framework.renderers import BaseRenderer
 
 from rest_framework_csv.misc import Echo
-from types import GeneratorType
-
-from logging import getLogger
 
 log = getLogger(__name__)
 
@@ -156,7 +155,7 @@ class CSVRenderer(BaseRenderer):
             nested_item[nested_header] = val
         return nested_item
 
-    def flatten_list(self, l: list[Any]) -> dict[str, Any]:
+    def flatten_list(self, l: list[Any]) -> dict[str, Any]:  # noqa: E741
         flat_list = {}
         for index, item in enumerate(l):
             index_str = str(index)

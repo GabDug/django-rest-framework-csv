@@ -1,12 +1,13 @@
 import csv
-from io import BytesIO, StringIO, TextIOWrapper
+from io import StringIO
+from pathlib import Path
 from types import GeneratorType
 from typing import Any
 
 from django.test import TestCase
 
-from .renderers import CSVRenderer, CSVStreamingRenderer, PaginatedCSVRenderer
 from .parsers import CSVParser
+from .renderers import CSVRenderer, CSVStreamingRenderer, PaginatedCSVRenderer
 
 
 class TestCSVRenderer(TestCase):
@@ -237,14 +238,12 @@ class TestCSVParser(TestCase):
         )
 
     def test_parse_file_with_only_carriage_returns(self):
-        import os.path
-
-        CURDIR = os.path.dirname(__file__)
-        CSVFILE = os.path.join(CURDIR, "testfixtures", "nonewlines.csv")
+        CURDIR = Path(__file__).parent
+        CSVFILE = CURDIR / "testfixtures" / "nonewlines.csv"
 
         parser = CSVParser()
 
-        with open(CSVFILE, "r") as csv_file:
+        with CSVFILE.open("r") as csv_file:
             data = parser.parse(csv_file)
             self.assertEqual(
                 data,

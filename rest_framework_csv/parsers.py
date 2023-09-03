@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import csv
-import io
-from typing import Generator, Iterable
+from typing import TYPE_CHECKING, Generator, Iterable
 
-from django.conf import settings
-from rest_framework.parsers import BaseParser
 from rest_framework.exceptions import ParseError
+from rest_framework.parsers import BaseParser
+
 from rest_framework_csv.orderedrows import OrderedRows
+
+if TYPE_CHECKING:
+    import io
 
 
 def unicode_csv_reader(
